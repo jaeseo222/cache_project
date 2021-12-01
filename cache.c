@@ -1,4 +1,4 @@
-/*
+ï»¿/*
  * cache.c
  *
  * 20493-01 Computer Architecture
@@ -85,6 +85,7 @@ int check_cache_data_hit(void* addr, char type) {
 
 	//add cache access cycle.
 	num_access_cycles++;
+	//ì•„ë§ˆë„ ë©”ì¸ì—ì„œ êµ¬í˜„  
 
 	//check all entries in a set.
 	int block_addr = (*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE;
@@ -93,16 +94,16 @@ int check_cache_data_hit(void* addr, char type) {
 	int word_index = ((*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / CACHE_SET_SIZE;
 	int cache_index = ((*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
 
-	//cacheÀÇ set¸¸Å­ µ¹·Áº¸°í
+	//cacheì˜ setë§Œí¼ ëŒë ¤ë³´ê³ 
 	for (int i = 0; i < CACHE_SET_SIZE; i++) {
-		//entry ÇÏ³ª¾¿ Á¢±Ù
+		//entry í•˜ë‚˜ì”© ì ‘ê·¼
 		for (int j = 0; j < DEFAULT_CACHE_ASSOC; j++) {
-			//Ä³½Ã ¸Ş¸ğ¸® Á¢±ÙÇÏ±â
+			//ìºì‹œ ë©”ëª¨ë¦¬ ì ‘ê·¼í•˜ê¸°
 			cache_entry_t* p = &cache_array[i][j];
 
-			//valid bitÀÌ 1ÀÌ°í(°ª ÀÌ¹Ì ÀÖ°í), tag°ªÀÌ ÀÏÄ¡ÇÏ¸é µ¥ÀÌÅÍ ¸®ÅÏ(È¤½Ã timeÀº °ÇµéÇÊ¿ä ¾ø¤·³ª?)
+			//valid bitì´ 1ì´ê³ (ê°’ ì´ë¯¸ ìˆê³ ), tagê°’ì´ ì¼ì¹˜í•˜ë©´ ë°ì´í„° ë¦¬í„´(í˜¹ì‹œ timeì€ ê±´ë“¤í•„ìš” ì—†ã…‡ë‚˜?)
 			if (p->valid == 1 && p->tag == (tag)) {
-				//p->timestamp = global_timestamp + 1;
+				p->timestamp = ++global_timestamp;
 				return p->data;
 			}
 		}
@@ -115,7 +116,7 @@ int find_entry_index_in_set(int cache_index) {
 	int entry_index;
 
 	/* Check if there exists any empty cache space by checking 'valid' */
-	
+
 
 	/* Otherwise, search over all entries to find the least recently used entry by checking 'timestamp' */
 
@@ -131,6 +132,11 @@ int access_memory(void* addr, char type) {
 
 	/* You need to invoke find_entry_index_in_set() for copying to the cache */
 
+	//byte address ì£¼ê³ 
+	//ë©”ì¸ë©”ëª¨ë¦¬ì˜ ì¸ë±ìŠ¤ ë°›ì•„ì˜¤ê¸°
+	int idx = find_entry_index_in_set((*(int*)addr));
+
+	//add
 
 
 
