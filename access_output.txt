@@ -1,3 +1,5 @@
 ===== addr 3 type b =====
 ===== addr 68 type h =====
 ===== addr 4 type h =====
+===== addr 48 type w =====
+===== addr 69 type b =====
