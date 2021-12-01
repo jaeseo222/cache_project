@@ -24,14 +24,14 @@ int retrieve_data(void* addr, char data_type) {
     int value_returned = -1; /* accessed data */
 
     /* Invoke check_cache_data_hit() */
-    value_returned = check_cache_data_hit(addr, data_type);
+    value_returned = check_cache_data_hit((void*)addr, data_type);
 
     /* In case of the cache miss event, access the main memory by invoking access_memory() */
     if (value_returned == -1) { //메인 메모리에서 캐시 메모리로 가져오기
         num_cache_misses++;
-        int check = access_memory(addr, data_type);
+        int accessed_data = access_memory((void*)addr, data_type);
 
-        if (check == -1) {
+        if (accessed_data == -1) {
             return -1;
         }
     }
@@ -64,10 +64,9 @@ int main(void) {
 
     /* Fill out here by invoking retrieve_data() */
     while (fscanf(ifp, "%d %c", &access_addr, &access_type) != EOF) {
-        retrieve_data(access_addr, access_type);
+        fprintf(ofp, "===== addr %d type %c =====\n", access_addr, access_type);
+        retrieve_data((void*)access_addr, access_type);
     }
-
-    num_access_cycles += MEMORY_ACCESS_CYCLE * num_cache_misses;
 
     fclose(ifp);
     fclose(ofp);
