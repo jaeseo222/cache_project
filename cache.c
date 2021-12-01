@@ -131,7 +131,7 @@ int find_entry_index_in_set(int cache_index) {
 
 	//맨 처음 entry의 time
 	int min_temp = cache_array[cache_index][0].timestamp;
-	for (int i = 0; i < DEFAULT_CACHE_ASSOC; i++) {
+	for (int i = 1; i < DEFAULT_CACHE_ASSOC; i++) {
 		//캐시 메모리 접근하기
 		cache_entry_t* p = &cache_array[cache_index][i];
 
