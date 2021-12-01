@@ -136,7 +136,7 @@ int find_entry_index_in_set(int cache_index) {
 		cache_entry_t* p = &cache_array[cache_index][i];
 
 		//모든 entry 중에서 가장 작은 time 가진 친구의 entry index로 업뎃
-		if (p->timestamp < min_temp && min_temp!= p->timestamp) {
+		if (p->timestamp < min_temp) {
 			min_temp = p->timestamp;
 			//update된 entry 주기
 			entry_index = i;
