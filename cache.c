@@ -114,6 +114,12 @@ int find_entry_index_in_set(int cache_index) {
 	int entry_index = 0;
 
 	/* Check if there exists any empty cache space by checking 'valid' */
+	for (int i = 0; i < DEFAULT_CACHE_ASSOC; i++) {
+		//캐시 메모리 접근하기
+		cache_entry_t* p = &cache_array[cache_index][i];
+		if (p->valid == 0) return i;
+	}
+
 	//근데 entry가 1개밖에 없으면(direct mapped), 그냥 index 0리턴 하라고 써져있네
 	if (DEFAULT_CACHE_ASSOC == 1)
 		return 0;
@@ -125,13 +131,12 @@ int find_entry_index_in_set(int cache_index) {
 
 	//맨 처음 entry의 time
 	int min_temp = cache_array[cache_index][0].timestamp;
-
-	for (int i = 1; i < DEFAULT_CACHE_ASSOC; i++) {
+	for (int i = 0; i < DEFAULT_CACHE_ASSOC; i++) {
 		//캐시 메모리 접근하기
 		cache_entry_t* p = &cache_array[cache_index][i];
 
 		//모든 entry 중에서 가장 작은 time 가진 친구의 entry index로 업뎃
-		if (p->timestamp < min_temp) {
+		if (p->timestamp < min_temp && min_temp!= p->timestamp) {
 			min_temp = p->timestamp;
 			//update된 entry 주기
 			entry_index = i;
