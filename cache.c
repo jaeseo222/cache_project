@@ -84,15 +84,14 @@ int check_cache_data_hit(void* addr, char type) {
 	/* Fill out here */
 
 	//add cache access cycle.
-	num_access_cycles++;
-	//아마도 메인에서 구현  
+	num_access_cycles += CACHE_ACCESS_CYCLE;
 
 	//check all entries in a set.
-	int block_addr = (*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int tag = ((*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE;
-	int byte_offset = (*(int*)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int word_index = ((*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / CACHE_SET_SIZE;
-	int cache_index = ((*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
+	int block_addr = (int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE;
+	int tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE;
+	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
+	int word_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / CACHE_SET_SIZE;
+	int cache_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
 
 	//cache의 set만큼 돌려보고
 	for (int i = 0; i < CACHE_SET_SIZE; i++) {
@@ -101,9 +100,9 @@ int check_cache_data_hit(void* addr, char type) {
 			//캐시 메모리 접근하기
 			cache_entry_t* p = &cache_array[i][j];
 
-			//valid bit이 1이고(값 이미 있고), tag값이 일치하면 데이터 리턴(혹시 time은 건들필요 없ㅇ나?)
+			//valid bit이 1이고(값 이미 있고), tag값이 일치하면 데이터 리턴(혹시 time은 건들필요 없나?)
 			if (p->valid == 1 && p->tag == (tag)) {
-				p->timestamp = ++global_timestamp;
+				p->timestamp = global_timestamp++;
 				return p->data;
 			}
 		}
@@ -113,7 +112,7 @@ int check_cache_data_hit(void* addr, char type) {
 }
 
 int find_entry_index_in_set(int cache_index) {
-	int entry_index;
+	int entry_index = 0;
 
 	/* Check if there exists any empty cache space by checking 'valid' */
 
@@ -127,24 +126,39 @@ int find_entry_index_in_set(int cache_index) {
 
 int access_memory(void* addr, char type) {
 
-	/* Fetch the data from the main memory and copy them to the cache */
 	/* void *addr: addr is byte address, whereas your main memory address is word address due to 'int memory_array[]' */
 
 	/* You need to invoke find_entry_index_in_set() for copying to the cache */
 
-	//byte address 주고
-	//메인메모리의 인덱스 받아오기
-	int idx = find_entry_index_in_set((*(int*)addr));
+	//cache_index(set_index) 보내줘서 entry_index 얻어오기
+	int cache_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
+	int entry_index = find_entry_index_in_set(cache_index);
 
-	//add
+	num_access_cycles += MEMORY_ACCESS_CYCLE;
 
-
+	/* Fetch the data from the main memory and copy them to the cache */
+	cache_entry_t* p = &cache_array[cache_index][entry_index];
+	p->timestamp = global_timestamp++;
+	p->valid = 1;
+	p->tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE;
+	int word_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / WORD_SIZE_BYTE; //메인 메모리 카피하는 시작 주소
+	for (int i = 0; i < DEFAULT_CACHE_BLOCK_SIZE_BYTE; i++) { //cache block size byte만큼 돌면서 main memory data를 cache에 옮기기
+		int index = i / WORD_SIZE_BYTE; //memory_array 시작 인덱스 (0 or 1)
+		int shift_bits = (i % WORD_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE; //shift연산 비트수
+		p->data[i] = memory_array[word_index + index] >> shift_bits;
+	}
 
 	/* Return the accessed data with a suitable type */
-
-
-
-
-
-	return 0;
+	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
+	int accessed_data = -1;
+	if (type == 'b') {
+		accessed_data = p->data[byte_offset];
+	}
+	else if (type == 'h') {
+		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8);
+	}
+	else if (type == 'w') {
+		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8) | (p->data[byte_offset+2] << 16) | (p->data[byte_offset+3] << 24);
+	}
+	return accessed_data;
 }
