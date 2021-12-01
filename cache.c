@@ -85,7 +85,6 @@ int check_cache_data_hit(void* addr, char type) {
 
 	//add cache access cycle.
 	num_access_cycles++;
-	//아마도 메인에서 구현  
 
 	//check all entries in a set.
 	int block_addr = (*(int*)addr) / DEFAULT_CACHE_BLOCK_SIZE_BYTE;

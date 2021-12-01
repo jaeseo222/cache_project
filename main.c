@@ -67,7 +67,7 @@ int main(void) {
         retrieve_data(access_addr, access_type);
     }
 
-    num_access_cycles = MEMORY_ACCESS_CYCLE * num_cache_misses + CACHE_ACCESS_CYCLE * (num_cache_hits + num_cache_misses);
+    num_access_cycles += MEMORY_ACCESS_CYCLE * num_cache_misses;
 
     fclose(ifp);
     fclose(ofp);
