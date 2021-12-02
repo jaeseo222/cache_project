@@ -175,12 +175,15 @@ int access_memory(void* addr, char type) {
 	int accessed_data = -1;
 	if (type == 'b') {
 		accessed_data = p->data[byte_offset];
+		num_bytes += 1;
 	}
 	else if (type == 'h') {
 		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8);
+		num_bytes += 2;
 	}
 	else if (type == 'w') {
 		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8) | (p->data[byte_offset+2] << 16) | (p->data[byte_offset+3] << 24);
+		num_bytes += 4;
 	}
 	return accessed_data;
 }
