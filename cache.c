@@ -79,6 +79,24 @@ void print_cache_entries() {
 	}
 }
 
+int func_accessed_data(cache_entry_t* p, void* addr, char type) {
+	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
+	int accessed_data = -1;
+	if (type == 'b') {
+		accessed_data = p->data[byte_offset];
+		num_bytes += 1;
+	}
+	else if (type == 'h') {
+		accessed_data = (p->data[byte_offset + 1] << 8) | ((p->data[byte_offset]) & 0x0ff);
+		num_bytes += 2;
+	}
+	else if (type == 'w') {
+		accessed_data = ((p->data[byte_offset]) & 0x0ff) | ((p->data[byte_offset + 1] << 8) & 0x0ffff) | ((p->data[byte_offset + 2] << 16) & 0x0ffffff) | (p->data[byte_offset + 3] << 24);
+		num_bytes += 4;
+	}
+	return accessed_data;
+}
+
 int check_cache_data_hit(void* addr, char type) {
 
 	/* Fill out here */
@@ -103,7 +121,8 @@ int check_cache_data_hit(void* addr, char type) {
 			//valid bit이 1이고(값 이미 있고), tag값이 일치하면 데이터 리턴(혹시 time은 건들필요 없나?)
 			if (p->valid == 1 && p->tag == (tag)) {
 				p->timestamp = global_timestamp++;
-				return p->data;
+				int accessed_data = func_accessed_data(p, (void*)addr, type);
+				return accessed_data;
 			}
 		}
 	}
@@ -171,19 +190,6 @@ int access_memory(void* addr, char type) {
 	}
 
 	/* Return the accessed data with a suitable type */
-	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int accessed_data = -1;
-	if (type == 'b') {
-		accessed_data = p->data[byte_offset];
-		num_bytes += 1;
-	}
-	else if (type == 'h') {
-		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8);
-		num_bytes += 2;
-	}
-	else if (type == 'w') {
-		accessed_data = (p->data[byte_offset]) | (p->data[byte_offset+1] << 8) | (p->data[byte_offset+2] << 16) | (p->data[byte_offset+3] << 24);
-		num_bytes += 4;
-	}
+	int accessed_data = func_accessed_data(p, (void*)addr, type);
 	return accessed_data;
 }

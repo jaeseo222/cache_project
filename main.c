@@ -29,11 +29,7 @@ int retrieve_data(void* addr, char data_type) {
     /* In case of the cache miss event, access the main memory by invoking access_memory() */
     if (value_returned == -1) { //메인 메모리에서 캐시 메모리로 가져오기
         num_cache_misses++;
-        int accessed_data = access_memory((void*)addr, data_type);
-
-        if (accessed_data == -1) {
-            return -1;
-        }
+        value_returned = access_memory((void*)addr, data_type);
     }
     else
         num_cache_hits++;
@@ -63,10 +59,23 @@ int main(void) {
     }
 
     /* Fill out here by invoking retrieve_data() */
+    fprintf(ofp, "[Accessed Data]\n");
     while (fscanf(ifp, "%d %c", &access_addr, &access_type) != EOF) {
-        fprintf(ofp, "===== addr %d type %c =====\n", access_addr, access_type);
-        retrieve_data((void*)access_addr, access_type);
+        int accessed_data = retrieve_data((void*)access_addr, access_type);
+        fprintf(ofp, "%d \t %c \t %#x\n", access_addr, access_type, accessed_data);
     }
+    fprintf(ofp,"-------------------------------------------\n");
+    if (DEFAULT_CACHE_ASSOC == 1)
+        fprintf(ofp, "[Direct mapped cache performance]\n");
+    else if (DEFAULT_CACHE_ASSOC == 2)
+        fprintf(ofp, "[2-way set associative cache performance]\n");
+    else
+        fprintf(ofp, "[Accessed Data]\n");
+    int accesses = num_cache_hits + num_cache_misses;
+    double hit_ratio = (double)num_cache_hits / ((double)accesses);
+    double bandwidth = (double)num_bytes / (double)num_access_cycles;
+    fprintf(ofp, "Hit ratio = %.2f (%d/%d)\n", hit_ratio, num_cache_hits, accesses);
+    fprintf(ofp, "Bandwidth = %.2f (%d/%d)\n", bandwidth, num_bytes, num_access_cycles);
 
     fclose(ifp);
     fclose(ofp);
