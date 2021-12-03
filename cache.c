@@ -79,117 +79,103 @@ void print_cache_entries() {
 	}
 }
 
-int func_accessed_data(cache_entry_t* p, void* addr, char type) {
-	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int accessed_data = -1;
-	if (type == 'b') {
-		accessed_data = p->data[byte_offset];
-		num_bytes += 1;
+int get_accessed_data(cache_entry_t* p, void* addr, char type) {
+	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE; // get byte offset.
+	int accessed_data = -1; // initialize accessed data.
+	if (type == 'b') { // if type byte.
+		accessed_data = p->data[byte_offset]; // copy 1 byte.
+		num_bytes += 1; // add 1 byte.
 	}
-	else if (type == 'h') {
-		accessed_data = (p->data[byte_offset + 1] << 8) | ((p->data[byte_offset]) & 0x0ff);
-		num_bytes += 2;
+	else if (type == 'h') { // if type half word.
+		accessed_data = (p->data[byte_offset + 1] << 8) | ((p->data[byte_offset]) & 0x0ff); // copy 2 byte. (& operate with 0x0ff to force expanding 0)
+		num_bytes += 2; // add 2 byte.
 	}
-	else if (type == 'w') {
-		accessed_data = ((p->data[byte_offset]) & 0x0ff) | ((p->data[byte_offset + 1] << 8) & 0x0ffff) | ((p->data[byte_offset + 2] << 16) & 0x0ffffff) | (p->data[byte_offset + 3] << 24);
-		num_bytes += 4;
+	else if (type == 'w') { // if type word.
+		// copy 4 byte. (&operate with 0x0ff to force expanding 0)
+		accessed_data = ((p->data[byte_offset]) & 0x0ff) | ((p->data[byte_offset + 1] << 8) & 0x0ffff) | ((p->data[byte_offset + 2] << 16) & 0x0ffffff) | (p->data[byte_offset + 3] << 24); 
+		num_bytes += 4; // add 4 byte.
 	}
+
+	// return accessed data.
 	return accessed_data;
 }
 
 int check_cache_data_hit(void* addr, char type) {
-
-	/* Fill out here */
-
-	//add cache access cycle.
+	// add cache access cycle.
 	num_access_cycles += CACHE_ACCESS_CYCLE;
 
-	//check all entries in a set.
-	int block_addr = (int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE;
-	int byte_offset = ((int)addr) % DEFAULT_CACHE_BLOCK_SIZE_BYTE;
-	int word_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / CACHE_SET_SIZE;
-	int cache_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
+	// check all entries in a set.
+	int tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE; // get tag.
 
-	//cache의 set만큼 돌려보고
-	for (int i = 0; i < CACHE_SET_SIZE; i++) {
-		//entry 하나씩 접근
+	for (int i = 0; i < CACHE_SET_SIZE; i++) { // access each entry.
 		for (int j = 0; j < DEFAULT_CACHE_ASSOC; j++) {
-			//캐시 메모리 접근하기
-			cache_entry_t* p = &cache_array[i][j];
+			cache_entry_t* p = &cache_array[i][j]; // access cache memory.
 
-			//valid bit이 1이고(값 이미 있고), tag값이 일치하면 데이터 리턴(혹시 time은 건들필요 없나?)
+			// if hit that valid bit already exists and tag is same.
 			if (p->valid == 1 && p->tag == (tag)) {
-				p->timestamp = global_timestamp++;
-				int accessed_data = func_accessed_data(p, (void*)addr, type);
-				return accessed_data;
+				p->timestamp = global_timestamp++; // cache time update.
+				int accessed_data = get_accessed_data(p, (void*)addr, type); // get accessed data.
+				return accessed_data; // Return the accessed data.
 			}
 		}
 	}
-	/* Return the data */
+
+	// if miss, return -1. 
 	return -1;
 }
 int find_entry_index_in_set(int cache_index) {
+	//initialize entry index.
 	int entry_index = 0;
 
-	/* Check if there exists any empty cache space by checking 'valid' */
-	for (int i = 0; i < DEFAULT_CACHE_ASSOC; i++) {
-		//캐시 메모리 접근하기
-		cache_entry_t* p = &cache_array[cache_index][i];
-		if (p->valid == 0) return i;
-	}
-
-	//근데 entry가 1개밖에 없으면(direct mapped), 그냥 index 0리턴 하라고 써져있네
+	// If the set has only 1 entry, return index 0.
 	if (DEFAULT_CACHE_ASSOC == 1)
 		return 0;
 
-	/* Otherwise, search over all entries to find the least recently used entry by checking 'timestamp' */
-	//direct 아닌경우,
-	//모든 entry 구경하러 가자.
-	//least recently used entry by checking timestamp를 찾자~!
+	// Check if there exists any empty cache space by checking 'valid'.
+	for (int i = 0; i < DEFAULT_CACHE_ASSOC; i++) { // access each entry.
+		cache_entry_t* p = &cache_array[cache_index][i]; // access cache memory.
+		if (p->valid == 0) // if valid not exists, return current index.
+			return i;
+	}
 
-	//맨 처음 entry의 time
-	int min_temp = cache_array[cache_index][0].timestamp;
-	for (int i = 1; i < DEFAULT_CACHE_ASSOC; i++) {
-		//캐시 메모리 접근하기
-		cache_entry_t* p = &cache_array[cache_index][i];
+	// Otherwise, search over all entries to find the least recently used entry by checking 'timestamp'.
+	int min_timestamp = cache_array[cache_index][0].timestamp; // first entry time.
+	for (int i = 1; i < DEFAULT_CACHE_ASSOC; i++) { // access each entry.
+		cache_entry_t* p = &cache_array[cache_index][i]; // access cache memory.
 
-		//모든 entry 중에서 가장 작은 time 가진 친구의 entry index로 업뎃
-		if (p->timestamp < min_temp) {
-			min_temp = p->timestamp;
-			//update된 entry 주기
-			entry_index = i;
+		// find LRU.
+		if (p->timestamp < min_timestamp) { // if current timestamp more smaller than min_timestamp.
+			min_timestamp = p->timestamp; // update smallest timestamp.
+			entry_index = i; // update entry index.
 		}
 	}
 
+	// return entry index.
 	return entry_index;
 }
 
 int access_memory(void* addr, char type) {
+	// get the entry index by invoking find_entry_index_in_set() for copying to the cache.
+	int cache_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE; // get cache index.(set index)
+	int entry_index = find_entry_index_in_set(cache_index); // get entry index.
 
-	/* void *addr: addr is byte address, whereas your main memory address is word address due to 'int memory_array[]' */
-
-	/* You need to invoke find_entry_index_in_set() for copying to the cache */
-
-	//cache_index(set_index) 보내줘서 entry_index 얻어오기
-	int cache_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) % CACHE_SET_SIZE;
-	int entry_index = find_entry_index_in_set(cache_index);
-
+	// add memory access cycle.
 	num_access_cycles += MEMORY_ACCESS_CYCLE;
 
-	/* Fetch the data from the main memory and copy them to the cache */
-	cache_entry_t* p = &cache_array[cache_index][entry_index];
-	p->timestamp = global_timestamp++;
-	p->valid = 1;
-	p->tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE;
-	int word_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / WORD_SIZE_BYTE; //메인 메모리 카피하는 시작 주소
-	for (int i = 0; i < DEFAULT_CACHE_BLOCK_SIZE_BYTE; i++) { //cache block size byte만큼 돌면서 main memory data를 cache에 옮기기
-		int index = i / WORD_SIZE_BYTE; //memory_array 시작 인덱스 (0 or 1)
-		int shift_bits = (i % WORD_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE; //shift연산 비트수
-		p->data[i] = memory_array[word_index + index] >> shift_bits;
+	// Fetch the data from the main memory and copy them to the cache.
+	cache_entry_t* p = &cache_array[cache_index][entry_index]; // access cache memory.
+	p->timestamp = global_timestamp++; // cache time update.
+	p->valid = 1; // cache valid update.
+	p->tag = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) / CACHE_SET_SIZE; // get tag.
+
+	int word_index = ((int)addr / DEFAULT_CACHE_BLOCK_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE / WORD_SIZE_BYTE; // get word index.
+	for (int i = 0; i < DEFAULT_CACHE_BLOCK_SIZE_BYTE; i++) { // copy main memory data to cache data.
+		int index = i / WORD_SIZE_BYTE; // adding index to word index(0 or 1).
+		int shift_bits = (i % WORD_SIZE_BYTE) * DEFAULT_CACHE_BLOCK_SIZE_BYTE; // shift oprating bits.
+		p->data[i] = memory_array[word_index + index] >> shift_bits; // copy each 1 byte.
 	}
 
-	/* Return the accessed data with a suitable type */
-	int accessed_data = func_accessed_data(p, (void*)addr, type);
+	// Return the accessed data with a suitable type.
+	int accessed_data = get_accessed_data(p, (void*)addr, type);
 	return accessed_data;
 }
