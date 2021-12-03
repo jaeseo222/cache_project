@@ -70,7 +70,7 @@ int main(void) {
     else if (DEFAULT_CACHE_ASSOC == 2)
         fprintf(ofp, "[2-way set associative cache performance]\n");
     else
-        fprintf(ofp, "[Accessed Data]\n");
+        fprintf(ofp, "[Fully associative cache performance]\n");
     int accesses = num_cache_hits + num_cache_misses;
     double hit_ratio = (double)num_cache_hits / ((double)accesses);
     double bandwidth = (double)num_bytes / (double)num_access_cycles;
